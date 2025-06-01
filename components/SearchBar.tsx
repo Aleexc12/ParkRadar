@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Text, FlatList, Keyboard, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Text, FlatList, Keyboard, ActivityIndicator, Alert } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 
@@ -20,6 +20,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [debugMessage, setDebugMessage] = useState<string | null>(null);
   const debounceTimeout = useRef<NodeJS.Timeout>();
 
   const fetchSuggestions = async (input: string) => {
@@ -29,17 +30,26 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     try {
-      console.log('Fetching suggestions for:', input);
+      setDebugMessage('Fetching suggestions...');
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
           input
         )}&components=country:es&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY}`
       );
       const data = await response.json();
-      console.log('Received suggestions:', data.predictions);
-      setSuggestions(data.predictions || []);
+      
+      if (!data.predictions) {
+        setDebugMessage('No suggestions found');
+        Alert.alert('Debug', 'No suggestions found');
+        return;
+      }
+      
+      setSuggestions(data.predictions);
+      setDebugMessage(`Found ${data.predictions.length} suggestions`);
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
+      const errorMsg = 'Error fetching suggestions: ' + error;
+      setDebugMessage(errorMsg);
+      Alert.alert('Debug', errorMsg);
       setSuggestions([]);
     } finally {
       setIsLoading(false);
@@ -48,15 +58,25 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   const getPlaceDetails = async (placeId: string) => {
     try {
-      console.log('Fetching place details for:', placeId);
+      setDebugMessage('Fetching place details...');
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY}`
       );
       const data = await response.json();
-      console.log('Received place details:', data.result?.geometry?.location);
-      return data.result?.geometry?.location;
+      
+      if (!data.result?.geometry?.location) {
+        const errorMsg = 'No location data found in place details';
+        setDebugMessage(errorMsg);
+        Alert.alert('Debug', errorMsg);
+        return null;
+      }
+      
+      setDebugMessage('Location found: ' + JSON.stringify(data.result.geometry.location));
+      return data.result.geometry.location;
     } catch (error) {
-      console.error('Error fetching place details:', error);
+      const errorMsg = 'Error fetching place details: ' + error;
+      setDebugMessage(errorMsg);
+      Alert.alert('Debug', errorMsg);
       return null;
     }
   };
@@ -75,14 +95,19 @@ const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   const handleSuggestionPress = async (suggestion: Suggestion) => {
-    console.log('Suggestion selected:', suggestion);
+    setDebugMessage('Suggestion selected: ' + suggestion.description);
+    Alert.alert('Debug', 'Selected: ' + suggestion.description);
+    
     setSearchQuery(suggestion.description);
     setSuggestions([]);
     Keyboard.dismiss();
 
     const location = await getPlaceDetails(suggestion.place_id);
-    console.log('Calling onSearch with:', suggestion.description, location);
-    onSearch(suggestion.description, location);
+    if (location) {
+      setDebugMessage('Calling onSearch with coordinates');
+      Alert.alert('Debug', 'Coordinates found: ' + JSON.stringify(location));
+      onSearch(suggestion.description, location);
+    }
   };
 
   const handleSubmit = async () => {
@@ -90,7 +115,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
       const firstSuggestion = suggestions[0];
       await handleSuggestionPress(firstSuggestion);
     } else if (searchQuery.trim()) {
-      console.log('Direct search with query:', searchQuery);
+      setDebugMessage('Direct search with query: ' + searchQuery);
+      Alert.alert('Debug', 'Direct search: ' + searchQuery);
       onSearch(searchQuery);
     }
   };
@@ -98,6 +124,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const clearSearch = () => {
     setSearchQuery('');
     setSuggestions([]);
+    setDebugMessage(null);
   };
 
   return (
@@ -114,7 +141,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           placeholderTextColor={Colors.neutral[500]}
         />
         {isLoading ? (
-          <ActivityIndicator size="small\" color={Colors.primary[600]} />
+          <ActivityIndicator size="small" color={Colors.primary[600]} />
         ) : (
           searchQuery.length > 0 && (
             <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
@@ -123,6 +150,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
           )
         )}
       </View>
+
+      {debugMessage && (
+        <View style={styles.debugContainer}>
+          <Text style={styles.debugText}>{debugMessage}</Text>
+        </View>
+      )}
 
       {suggestions.length > 0 && (
         <FlatList
@@ -195,6 +228,17 @@ const styles = StyleSheet.create({
   suggestionText: {
     fontSize: 14,
     color: Colors.neutral[800],
+    fontFamily: 'Inter-Regular',
+  },
+  debugContainer: {
+    backgroundColor: Colors.neutral[800],
+    padding: 8,
+    borderRadius: 4,
+    marginTop: 8,
+  },
+  debugText: {
+    color: Colors.white,
+    fontSize: 12,
     fontFamily: 'Inter-Regular',
   },
 });
