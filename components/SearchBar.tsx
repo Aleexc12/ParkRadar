@@ -29,12 +29,14 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
 
     try {
+      console.log('Fetching suggestions for:', input);
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
           input
         )}&components=country:es&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY}`
       );
       const data = await response.json();
+      console.log('Received suggestions:', data.predictions);
       setSuggestions(data.predictions || []);
     } catch (error) {
       console.error('Error fetching suggestions:', error);
@@ -46,10 +48,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   const getPlaceDetails = async (placeId: string) => {
     try {
+      console.log('Fetching place details for:', placeId);
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry&key=${process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY}`
       );
       const data = await response.json();
+      console.log('Received place details:', data.result?.geometry?.location);
       return data.result?.geometry?.location;
     } catch (error) {
       console.error('Error fetching place details:', error);
@@ -71,15 +75,23 @@ const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   const handleSuggestionPress = async (suggestion: Suggestion) => {
+    console.log('Suggestion selected:', suggestion);
     setSearchQuery(suggestion.description);
     setSuggestions([]);
     Keyboard.dismiss();
 
     const location = await getPlaceDetails(suggestion.place_id);
-    if (location) {
-      onSearch(suggestion.description, location);
-    } else {
-      onSearch(suggestion.description);
+    console.log('Calling onSearch with:', suggestion.description, location);
+    onSearch(suggestion.description, location);
+  };
+
+  const handleSubmit = async () => {
+    if (suggestions.length > 0) {
+      const firstSuggestion = suggestions[0];
+      await handleSuggestionPress(firstSuggestion);
+    } else if (searchQuery.trim()) {
+      console.log('Direct search with query:', searchQuery);
+      onSearch(searchQuery);
     }
   };
 
@@ -97,11 +109,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
           placeholder={placeholder}
           value={searchQuery}
           onChangeText={handleInputChange}
+          onSubmitEditing={handleSubmit}
           returnKeyType="search"
           placeholderTextColor={Colors.neutral[500]}
         />
         {isLoading ? (
-          <ActivityIndicator size="small\" color={Colors.primary[600]} />
+          <ActivityIndicator size="small" color={Colors.primary[600]} />
         ) : (
           searchQuery.length > 0 && (
             <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
