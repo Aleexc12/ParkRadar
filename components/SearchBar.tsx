@@ -114,7 +114,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           placeholderTextColor={Colors.neutral[500]}
         />
         {isLoading ? (
-          <ActivityIndicator size="small" color={Colors.primary[600]} />
+          <ActivityIndicator size="small\" color={Colors.primary[600]} />
         ) : (
           searchQuery.length > 0 && (
             <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
