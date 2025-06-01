@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import GoogleMapReact from 'google-map-react';
 import { StyleSheet, View } from 'react-native';
 import { ParkingSpot } from '@/data/parkingSpots';
@@ -24,16 +24,6 @@ const WebMapView: React.FC<WebMapViewProps> = ({
   onMarkerPress,
   userLocation,
 }) => {
-  const mapRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (mapRef.current) {
-      const zoom = Math.log2(360 / region.longitudeDelta) - 1;
-      mapRef.current.setCenter({ lat: region.latitude, lng: region.longitude });
-      mapRef.current.setZoom(zoom);
-    }
-  }, [region]);
-
   const handleBoundsChange = (bounds: any) => {
     const center = {
       latitude: bounds.center.lat,
@@ -47,7 +37,7 @@ const WebMapView: React.FC<WebMapViewProps> = ({
   return (
     <View style={styles.container}>
       <GoogleMapReact
-        bootstrapURLKeys={{ key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || '' }}
+        bootstrapURLKeys={{ key: 'AIzaSyA7KcEErUn1gTp1rvrDwX0K3lrPoR7ZO5U' }} // Add your Google Maps API key here
         defaultCenter={{
           lat: region.latitude,
           lng: region.longitude,
@@ -56,10 +46,6 @@ const WebMapView: React.FC<WebMapViewProps> = ({
         onChange={handleBoundsChange}
         options={{
           fullscreenControl: false,
-        }}
-        yesIWantToUseGoogleMapApiInternals
-        onGoogleApiLoaded={({ map }) => {
-          mapRef.current = map;
         }}
       >
         {parkingSpots.map((spot) => (
