@@ -6,99 +6,86 @@ export interface ParkingSpot {
   description: string;
   latitude: number;
   longitude: number;
-  availableSpots: number;
   totalSpots: number;
   isFavorite?: boolean;
-  price?: {
-    amount: number;
-    currency: string;
-    period: string;
-  };
+  zone: string;
 }
 
-// Default region for the map
+// Default region centered on Madrid
 export const DEFAULT_REGION: Region = {
-  latitude: 37.78825,
-  longitude: -122.4324,
+  latitude: 40.4168,
+  longitude: -3.7038,
   latitudeDelta: 0.0922,
   longitudeDelta: 0.0421,
 };
 
-// Mock parking spot data
+// Mock parking spot data for Madrid
 export const PARKING_SPOTS: ParkingSpot[] = [
   {
     id: '1',
-    name: 'Downtown Parking',
-    description: 'Open-air parking in the downtown area',
-    latitude: 37.78825,
-    longitude: -122.4324,
-    availableSpots: 15,
-    totalSpots: 50,
-    isFavorite: false,
-    price: {
-      amount: 2.5,
-      currency: 'USD',
-      period: 'hour',
-    },
+    name: 'Plaza Mayor',
+    description: 'Parking cerca de Plaza Mayor',
+    latitude: 40.4155,
+    longitude: -3.7074,
+    totalSpots: 120,
+    zone: 'Centro',
   },
   {
     id: '2',
-    name: 'Market Street Parking',
-    description: 'Convenient parking near Market Street',
-    latitude: 37.7852,
-    longitude: -122.4348,
-    availableSpots: 7,
-    totalSpots: 30,
-    isFavorite: true,
-    price: {
-      amount: 3,
-      currency: 'USD',
-      period: 'hour',
-    },
+    name: 'Malasaña',
+    description: 'Zona de estacionamiento en Malasaña',
+    latitude: 40.4279,
+    longitude: -3.7032,
+    totalSpots: 80,
+    zone: 'Malasaña',
   },
   {
     id: '3',
-    name: 'City Hall Parking',
-    description: 'Public parking near City Hall',
-    latitude: 37.7799,
-    longitude: -122.4294,
-    availableSpots: 22,
-    totalSpots: 45,
-    isFavorite: false,
-    price: {
-      amount: 2,
-      currency: 'USD',
-      period: 'hour',
-    },
+    name: 'Lavapiés',
+    description: 'Parking público en Lavapiés',
+    latitude: 40.4098,
+    longitude: -3.7038,
+    totalSpots: 60,
+    zone: 'Lavapiés',
   },
   {
     id: '4',
-    name: 'Bay Street Parking',
-    description: 'Open-air parking with bay views',
-    latitude: 37.7957,
-    longitude: -122.4339,
-    availableSpots: 3,
-    totalSpots: 25,
-    isFavorite: false,
-    price: {
-      amount: 4,
-      currency: 'USD',
-      period: 'hour',
-    },
+    name: 'Barrio Salamanca',
+    description: 'Estacionamiento en Salamanca',
+    latitude: 40.4241,
+    longitude: -3.6823,
+    totalSpots: 150,
+    zone: 'Salamanca',
   },
   {
     id: '5',
-    name: 'Park Avenue Parking',
-    description: 'Spacious parking near the park',
-    latitude: 37.7739,
-    longitude: -122.4312,
-    availableSpots: 18,
-    totalSpots: 40,
-    isFavorite: true,
-    price: {
-      amount: 2.5,
-      currency: 'USD',
-      period: 'hour',
-    },
+    name: 'Chueca',
+    description: 'Parking zona Chueca',
+    latitude: 40.4231,
+    longitude: -3.6977,
+    totalSpots: 90,
+    zone: 'Chueca',
   },
 ];
+
+// Function to calculate distance between two points in km
+export function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function deg2rad(deg: number): number {
+  return deg * (Math.PI / 180);
+}

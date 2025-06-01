@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapComponent from '@/components/MapView';
 import SearchBar from '@/components/SearchBar';
 import DrivingMode from '@/components/DrivingMode';
 import SpotDetails from '@/components/SpotDetails';
-import { PARKING_SPOTS, ParkingSpot } from '@/data/parkingSpots';
+import { PARKING_SPOTS, ParkingSpot, calculateDistance, DEFAULT_REGION } from '@/data/parkingSpots';
 import Colors from '@/constants/Colors';
 import { Car } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import MapView from 'react-native-maps';
 
 export default function MapScreen() {
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(PARKING_SPOTS);
@@ -19,9 +20,10 @@ export default function MapScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [mapRegion, setMapRegion] = useState(DEFAULT_REGION);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    // Get user location
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -37,46 +39,41 @@ export default function MapScreen() {
     })();
   }, []);
 
-  useEffect(() => {
-    // If in driving mode and we have user location, find nearby spots
-    if (isDrivingMode && userLocation) {
-      const spotsWithDistance = parkingSpots.map(spot => {
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
+  const handleSearch = (query: string) => {
+    const searchTerm = query.toLowerCase();
+    
+    // Find spots that match the search term
+    const matchingSpots = PARKING_SPOTS.filter(spot => 
+      spot.name.toLowerCase().includes(searchTerm) ||
+      spot.zone.toLowerCase().includes(searchTerm) ||
+      spot.description.toLowerCase().includes(searchTerm)
+    );
+
+    if (matchingSpots.length > 0) {
+      // Center the map on the first matching spot
+      const firstSpot = matchingSpots[0];
+      const newRegion = {
+        latitude: firstSpot.latitude,
+        longitude: firstSpot.longitude,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      };
+      
+      setMapRegion(newRegion);
+      mapRef.current?.animateToRegion(newRegion);
+
+      // Filter spots within 5km radius
+      const nearbySpots = PARKING_SPOTS.filter(spot => 
+        calculateDistance(
+          firstSpot.latitude,
+          firstSpot.longitude,
           spot.latitude,
           spot.longitude
-        );
-        return { ...spot, distance };
-      });
+        ) <= 5
+      );
       
-      // Sort by distance and take nearest spots
-      const sorted = spotsWithDistance.sort((a: any, b: any) => a.distance - b.distance);
-      setNearbySpots(sorted.slice(0, 5));
+      setParkingSpots(nearbySpots);
     }
-  }, [isDrivingMode, userLocation, parkingSpots]);
-
-  // Calculate distance between two coordinates in km
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the Earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in km
-    return distance;
-  };
-
-  const deg2rad = (deg: number) => {
-    return deg * (Math.PI / 180);
-  };
-
-  const handleSearch = (query: string) => {
-    // In a real app, this would geocode the search and center the map
-    console.log('Search for:', query);
   };
 
   const handleMarkerPress = (spot: ParkingSpot) => {
@@ -105,8 +102,6 @@ export default function MapScreen() {
   };
 
   const handleNavigate = (spot: ParkingSpot) => {
-    // In a real app, this would start navigation to the spot
-    console.log('Navigate to:', spot.name);
     setSelectedSpot(null);
     setIsDrivingMode(true);
   };
@@ -121,8 +116,10 @@ export default function MapScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <MapComponent
+        ref={mapRef}
         parkingSpots={parkingSpots}
         onMarkerPress={handleMarkerPress}
+        initialRegion={mapRegion}
       />
       
       <SearchBar onSearch={handleSearch} />

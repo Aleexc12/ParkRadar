@@ -10,7 +10,7 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
-  placeholder = 'Search for parking...',
+  placeholder = 'Buscar zona de aparcamiento...',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
