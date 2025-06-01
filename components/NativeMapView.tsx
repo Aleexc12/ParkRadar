@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { StyleSheet, Dimensions } from 'react-native';
 import { ParkingSpot } from '@/data/parkingSpots';
@@ -19,8 +19,17 @@ const NativeMapView: React.FC<NativeMapViewProps> = ({
   onMarkerPress,
   userLocation,
 }) => {
+  const mapRef = useRef<MapView>(null);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(region, 1000);
+    }
+  }, [region]);
+
   return (
     <MapView
+      ref={mapRef}
       provider={PROVIDER_GOOGLE}
       style={styles.map}
       region={region}
