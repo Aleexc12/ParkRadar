@@ -1,37 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, Platform } from 'react-native';
+import { StyleSheet, View, Dimensions } from 'react-native';
+import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { ParkingSpot, DEFAULT_REGION } from '@/data/parkingSpots';
+import ParkingMarker from './ParkingMarker';
 import Colors from '@/constants/Colors';
 import * as Location from 'expo-location';
-
-// Import map components based on platform
-const WebMapView = Platform.select({
-  web: () => require('./WebMapView').default,
-  default: () => null,
-})();
-
-const NativeMapView = Platform.select({
-  ios: () => require('./NativeMapView').default,
-  android: () => require('./NativeMapView').default,
-  default: () => null,
-})();
 
 interface MapComponentProps {
   parkingSpots: ParkingSpot[];
   onMarkerPress?: (spot: ParkingSpot) => void;
-  initialRegion?: typeof DEFAULT_REGION;
+  initialRegion?: Region;
 }
 
-const MapView: React.FC<MapComponentProps> = ({
+const MapComponent: React.FC<MapComponentProps> = ({
   parkingSpots,
   onMarkerPress,
   initialRegion = DEFAULT_REGION,
 }) => {
-  const [region, setRegion] = useState(initialRegion);
+  const [region, setRegion] = useState<Region>(initialRegion);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     (async () => {
@@ -47,36 +38,51 @@ const MapView: React.FC<MapComponentProps> = ({
         longitude: location.coords.longitude,
       };
       setUserLocation(userCoords);
-      setRegion({
-        ...userCoords,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
+
+      // Center map on user's location
+      if (mapRef.current) {
+        setRegion({
+          ...userCoords,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+        mapRef.current.animateToRegion({
+          ...userCoords,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+      }
     })();
   }, []);
 
-  // Render the appropriate map component based on platform
-  const MapComponent = Platform.OS === 'web' ? WebMapView : NativeMapView;
-
-  if (!MapComponent) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.fallback}>
-          <Text>Map is not supported on this platform</Text>
-        </View>
-      </View>
-    );
-  }
+  const handleMarkerPress = (spot: ParkingSpot) => {
+    if (onMarkerPress) {
+      onMarkerPress(spot);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <MapComponent
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
         region={region}
-        onRegionChange={setRegion}
-        parkingSpots={parkingSpots}
-        onMarkerPress={onMarkerPress}
-        userLocation={userLocation}
-      />
+        onRegionChangeComplete={setRegion}
+        showsUserLocation={true}
+        showsMyLocationButton={true}
+        showsCompass={true}
+        showsScale={true}
+        showsTraffic={false}
+      >
+        {parkingSpots.map((spot) => (
+          <ParkingMarker
+            key={spot.id}
+            spot={spot}
+            onPress={() => handleMarkerPress(spot)}
+          />
+        ))}
+      </MapView>
     </View>
   );
 };
@@ -86,11 +92,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  fallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  map: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
 });
 
-export default MapView;
+export default MapComponent;
