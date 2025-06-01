@@ -1,14 +1,17 @@
 import { Region } from 'react-native-maps';
+import { supabase, type ParkingSpot as SupabaseParkingSpot } from '@/lib/supabase';
 
-export interface ParkingSpot {
-  id: string;
-  name: string;
-  description: string;
-  latitude: number;
-  longitude: number;
+// Extended ParkingSpot type with UI-specific properties
+export interface ParkingSpot extends Omit<SupabaseParkingSpot, 'total_spots'> {
   totalSpots: number;
+  availableSpots?: number;
+  description?: string;
   isFavorite?: boolean;
-  zone: string;
+  zone?: string;
+  price?: {
+    amount: number;
+    period: string;
+  };
 }
 
 // Default region centered on Madrid
@@ -19,54 +22,31 @@ export const DEFAULT_REGION: Region = {
   longitudeDelta: 0.0421,
 };
 
-// Mock parking spot data for Madrid
-export const PARKING_SPOTS: ParkingSpot[] = [
-  {
-    id: '1',
-    name: 'Plaza Mayor',
-    description: 'Parking cerca de Plaza Mayor',
-    latitude: 40.4155,
-    longitude: -3.7074,
-    totalSpots: 120,
-    zone: 'Centro',
-  },
-  {
-    id: '2',
-    name: 'Malasaña',
-    description: 'Zona de estacionamiento en Malasaña',
-    latitude: 40.4279,
-    longitude: -3.7032,
-    totalSpots: 80,
-    zone: 'Malasaña',
-  },
-  {
-    id: '3',
-    name: 'Lavapiés',
-    description: 'Parking público en Lavapiés',
-    latitude: 40.4098,
-    longitude: -3.7038,
-    totalSpots: 60,
-    zone: 'Lavapiés',
-  },
-  {
-    id: '4',
-    name: 'Barrio Salamanca',
-    description: 'Estacionamiento en Salamanca',
-    latitude: 40.4241,
-    longitude: -3.6823,
-    totalSpots: 150,
-    zone: 'Salamanca',
-  },
-  {
-    id: '5',
-    name: 'Chueca',
-    description: 'Parking zona Chueca',
-    latitude: 40.4231,
-    longitude: -3.6977,
-    totalSpots: 90,
-    zone: 'Chueca',
-  },
-];
+// Function to transform Supabase parking spot to UI parking spot
+export function transformParkingSpot(spot: SupabaseParkingSpot): ParkingSpot {
+  return {
+    ...spot,
+    totalSpots: spot.total_spots,
+    availableSpots: spot.total_spots, // For now, assume all spots are available
+    description: `${spot.type.charAt(0).toUpperCase() + spot.type.slice(1)} parking near ${spot.name}`,
+    zone: spot.name.split(' ')[0], // Use first word of name as zone
+  };
+}
+
+// Function to fetch parking spots from Supabase
+export async function fetchParkingSpots(): Promise<ParkingSpot[]> {
+  const { data, error } = await supabase
+    .from('parkings')
+    .select('*')
+    .returns<SupabaseParkingSpot[]>();
+
+  if (error) {
+    console.error('Error fetching parking spots:', error);
+    return [];
+  }
+
+  return data.map(transformParkingSpot);
+}
 
 // Function to calculate distance between two points in km
 export function calculateDistance(

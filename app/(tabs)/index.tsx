@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapComponent from '@/components/MapView';
 import SearchBar from '@/components/SearchBar';
 import DrivingMode from '@/components/DrivingMode';
 import SpotDetails from '@/components/SpotDetails';
-import { PARKING_SPOTS, ParkingSpot, calculateDistance, DEFAULT_REGION } from '@/data/parkingSpots';
+import { fetchParkingSpots, ParkingSpot, calculateDistance, DEFAULT_REGION } from '@/data/parkingSpots';
 import Colors from '@/constants/Colors';
 import { Car } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import { supabase } from '@/lib/supabase';
 
 export default function MapScreen() {
-  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(PARKING_SPOTS);
+  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
   const [isDrivingMode, setIsDrivingMode] = useState(false);
   const [nearbySpots, setNearbySpots] = useState<ParkingSpot[]>([]);
@@ -20,12 +21,32 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [mapRegion, setMapRegion] = useState(DEFAULT_REGION);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
+    loadParkingSpots();
+    setupLocationTracking();
+  }, []);
+
+  const loadParkingSpots = async () => {
+    try {
+      setIsLoading(true);
+      const spots = await fetchParkingSpots();
+      setParkingSpots(spots);
+    } catch (err) {
+      setError('Failed to load parking spots');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setupLocationTracking = async () => {
+    try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        console.log('Permission to access location was denied');
+        setError('Permission to access location was denied');
         return;
       }
 
@@ -35,31 +56,47 @@ export default function MapScreen() {
         longitude: location.coords.longitude,
       };
       setUserLocation(userCoords);
-    })();
-  }, []);
-
-  const handleSearch = (query: string, coordinates?: { lat: number; lng: number }) => {
-    if (coordinates) {
-      // Center map on the selected location
-      const newRegion = {
-        latitude: coordinates.lat,
-        longitude: coordinates.lng,
+      setMapRegion({
+        ...userCoords,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
-      };
-      setMapRegion(newRegion);
+      });
+    } catch (err) {
+      setError('Failed to get location');
+      console.error(err);
+    }
+  };
 
-      // Find parking spots within 5km radius
-      const nearbySpots = PARKING_SPOTS.filter(spot => 
-        calculateDistance(
-          coordinates.lat,
-          coordinates.lng,
-          spot.latitude,
-          spot.longitude
-        ) <= 5
-      );
-      
-      setParkingSpots(nearbySpots);
+  const handleSearch = async (query: string, coordinates?: { lat: number; lng: number }) => {
+    try {
+      // Log search query
+      await supabase
+        .from('search_logs')
+        .insert({ query_text: query });
+
+      if (coordinates) {
+        const newRegion = {
+          latitude: coordinates.lat,
+          longitude: coordinates.lng,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        };
+        setMapRegion(newRegion);
+
+        // Find parking spots within 5km radius
+        const nearbySpots = parkingSpots.filter(spot => 
+          calculateDistance(
+            coordinates.lat,
+            coordinates.lng,
+            spot.latitude,
+            spot.longitude
+          ) <= 5
+        );
+        
+        setNearbySpots(nearbySpots);
+      }
+    } catch (err) {
+      console.error('Error logging search:', err);
     }
   };
 
@@ -94,6 +131,14 @@ export default function MapScreen() {
       setSelectedSpot(null);
     }
   };
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -149,6 +194,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: Colors.white,
+  },
+  errorText: {
+    color: Colors.error[600],
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: 'Inter-Regular',
   },
   drivingModeButton: {
     position: 'absolute',
