@@ -1,71 +1,69 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import GoogleMapReact from 'google-map-react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ParkingSpot } from '@/data/parkingSpots';
-import Colors from '@/constants/Colors';
+import ParkingMarker from './ParkingMarker';
 
 interface WebMapViewProps {
-  parkingSpots: ParkingSpot[];
-  onMarkerPress?: (spot: ParkingSpot) => void;
-  initialRegion: {
+  region: {
     latitude: number;
     longitude: number;
     latitudeDelta: number;
     longitudeDelta: number;
   };
-  userLocation?: {
-    latitude: number;
-    longitude: number;
-  } | null;
+  onRegionChange: (region: any) => void;
+  parkingSpots: ParkingSpot[];
+  onMarkerPress?: (spot: ParkingSpot) => void;
+  userLocation: { latitude: number; longitude: number; } | null;
 }
-
-interface MarkerProps {
-  spot: ParkingSpot;
-  onPress: () => void;
-  lat: number;
-  lng: number;
-}
-
-const Marker: React.FC<MarkerProps> = ({ spot, onPress }) => {
-  // Calculate color based on availability
-  const getMarkerColor = () => {
-    const availabilityPercentage = (spot.availableSpots / spot.totalSpots) * 100;
-    if (availabilityPercentage >= 50) return Colors.success[500];
-    if (availabilityPercentage >= 20) return Colors.warning[500];
-    return Colors.error[500];
-  };
-
-  return (
-    <View style={[styles.marker, { backgroundColor: getMarkerColor() }]} onClick={onPress}>
-      <Text style={styles.markerText}>{spot.availableSpots}</Text>
-    </View>
-  );
-};
 
 const WebMapView: React.FC<WebMapViewProps> = ({
+  region,
+  onRegionChange,
   parkingSpots,
   onMarkerPress,
-  initialRegion,
   userLocation,
 }) => {
-  const defaultProps = {
-    center: {
-      lat: initialRegion.latitude,
-      lng: initialRegion.longitude,
-    },
-    zoom: 14,
+  const mapRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      const zoom = Math.log2(360 / region.longitudeDelta) - 1;
+      mapRef.current.setCenter({ lat: region.latitude, lng: region.longitude });
+      mapRef.current.setZoom(zoom);
+    }
+  }, [region]);
+
+  const handleBoundsChange = (bounds: any) => {
+    const center = {
+      latitude: bounds.center.lat,
+      longitude: bounds.center.lng,
+      latitudeDelta: region.latitudeDelta,
+      longitudeDelta: region.longitudeDelta,
+    };
+    onRegionChange(center);
   };
 
   return (
-    <div style={{ height: '100%', width: '100%' }}>
+    <View style={styles.container}>
       <GoogleMapReact
         bootstrapURLKeys={{ key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || '' }}
-        defaultCenter={defaultProps.center}
-        defaultZoom={defaultProps.zoom}
+        defaultCenter={{
+          lat: region.latitude,
+          lng: region.longitude,
+        }}
+        defaultZoom={15}
+        onChange={handleBoundsChange}
+        options={{
+          fullscreenControl: false,
+        }}
         yesIWantToUseGoogleMapApiInternals
+        onGoogleApiLoaded={({ map }) => {
+          mapRef.current = map;
+        }}
       >
         {parkingSpots.map((spot) => (
-          <Marker
+          <ParkingMarker
             key={spot.id}
             lat={spot.latitude}
             lng={spot.longitude}
@@ -81,33 +79,22 @@ const WebMapView: React.FC<WebMapViewProps> = ({
           />
         )}
       </GoogleMapReact>
-    </div>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  marker: {
-    borderRadius: 20,
-    padding: 8,
-    minWidth: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ translateX: -20 }, { translateY: -20 }],
-  },
-  markerText: {
-    color: Colors.white,
-    fontWeight: 'bold',
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
+  container: {
+    flex: 1,
+    height: '100%',
   },
   userLocation: {
     width: 16,
     height: 16,
-    borderRadius: 8,
-    backgroundColor: Colors.primary[600],
-    borderWidth: 3,
-    borderColor: Colors.white,
-    transform: [{ translateX: -8 }, { translateY: -8 }],
+    backgroundColor: '#4285F4',
+    borderRadius: 50,
+    border: '2px solid white',
+    boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)',
   },
 });
 
