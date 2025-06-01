@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Text, Platform } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import { ParkingSpot, DEFAULT_REGION } from '@/data/parkingSpots';
 import ParkingMarker from './ParkingMarker';
 import Colors from '@/constants/Colors';
 import * as Location from 'expo-location';
 
-// Import map components based on platform
+// Import map components based on platform directly in the component
 const WebMapView = Platform.select({
   web: () => require('./WebMapView').default,
   default: () => null,
