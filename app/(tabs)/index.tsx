@@ -9,7 +9,6 @@ import { PARKING_SPOTS, ParkingSpot, calculateDistance, DEFAULT_REGION } from '@
 import Colors from '@/constants/Colors';
 import { Car } from 'lucide-react-native';
 import * as Location from 'expo-location';
-import MapView from 'react-native-maps';
 
 export default function MapScreen() {
   const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>(PARKING_SPOTS);
@@ -21,7 +20,6 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [mapRegion, setMapRegion] = useState(DEFAULT_REGION);
-  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     (async () => {
@@ -32,41 +30,30 @@ export default function MapScreen() {
       }
 
       let location = await Location.getCurrentPositionAsync({});
-      setUserLocation({
+      const userCoords = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      });
+      };
+      setUserLocation(userCoords);
     })();
   }, []);
 
-  const handleSearch = (query: string) => {
-    const searchTerm = query.toLowerCase();
-    
-    // Find spots that match the search term
-    const matchingSpots = PARKING_SPOTS.filter(spot => 
-      spot.name.toLowerCase().includes(searchTerm) ||
-      spot.zone.toLowerCase().includes(searchTerm) ||
-      spot.description.toLowerCase().includes(searchTerm)
-    );
-
-    if (matchingSpots.length > 0) {
-      // Center the map on the first matching spot
-      const firstSpot = matchingSpots[0];
+  const handleSearch = (query: string, coordinates?: { lat: number; lng: number }) => {
+    if (coordinates) {
+      // Center map on the selected location
       const newRegion = {
-        latitude: firstSpot.latitude,
-        longitude: firstSpot.longitude,
+        latitude: coordinates.lat,
+        longitude: coordinates.lng,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
       };
-      
       setMapRegion(newRegion);
-      mapRef.current?.animateToRegion(newRegion);
 
-      // Filter spots within 5km radius
+      // Find parking spots within 5km radius
       const nearbySpots = PARKING_SPOTS.filter(spot => 
         calculateDistance(
-          firstSpot.latitude,
-          firstSpot.longitude,
+          coordinates.lat,
+          coordinates.lng,
           spot.latitude,
           spot.longitude
         ) <= 5
@@ -101,11 +88,6 @@ export default function MapScreen() {
     }
   };
 
-  const handleNavigate = (spot: ParkingSpot) => {
-    setSelectedSpot(null);
-    setIsDrivingMode(true);
-  };
-
   const toggleDrivingMode = () => {
     setIsDrivingMode(prevMode => !prevMode);
     if (selectedSpot) {
@@ -116,7 +98,6 @@ export default function MapScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <MapComponent
-        ref={mapRef}
         parkingSpots={parkingSpots}
         onMarkerPress={handleMarkerPress}
         initialRegion={mapRegion}
@@ -158,7 +139,6 @@ export default function MapScreen() {
           spot={selectedSpot}
           onClose={handleCloseDetails}
           onToggleFavorite={handleToggleFavorite}
-          onNavigate={handleNavigate}
         />
       )}
     </SafeAreaView>
