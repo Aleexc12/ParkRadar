@@ -46,8 +46,8 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 60,
-    paddingBottom: 8,
+    height: 80,
+    paddingBottom: 24,
     paddingTop: 8,
     backgroundColor: Colors.white,
     borderTopWidth: 1,

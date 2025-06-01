@@ -2,46 +2,19 @@ import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
 import { ParkingSpot } from '@/data/parkingSpots';
 import Colors from '@/constants/Colors';
-import { Navigation, Heart, X } from 'lucide-react-native';
+import { Heart, X } from 'lucide-react-native';
 
 interface SpotDetailsProps {
   spot: ParkingSpot;
   onClose: () => void;
   onToggleFavorite: (spotId: string) => void;
-  onNavigate: (spot: ParkingSpot) => void;
 }
 
 const SpotDetails: React.FC<SpotDetailsProps> = ({
   spot,
   onClose,
   onToggleFavorite,
-  onNavigate,
 }) => {
-  // Calculate availability percentage
-  const availabilityPercentage = (spot.availableSpots / spot.totalSpots) * 100;
-  
-  // Determine availability text and color
-  const getAvailabilityInfo = () => {
-    if (availabilityPercentage >= 50) {
-      return {
-        text: 'High Availability',
-        color: Colors.success[500],
-      };
-    } else if (availabilityPercentage >= 20) {
-      return {
-        text: 'Medium Availability',
-        color: Colors.warning[500],
-      };
-    } else {
-      return {
-        text: 'Low Availability',
-        color: Colors.error[500],
-      };
-    }
-  };
-  
-  const availabilityInfo = getAvailabilityInfo();
-
   return (
     <Animated.View style={styles.container}>
       <View style={styles.header}>
@@ -55,25 +28,14 @@ const SpotDetails: React.FC<SpotDetailsProps> = ({
       
       <View style={styles.infoContainer}>
         <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Available</Text>
-          <Text style={styles.infoValue}>{spot.availableSpots} / {spot.totalSpots}</Text>
+          <Text style={styles.infoLabel}>Estimated Capacity</Text>
+          <Text style={styles.infoValue}>{spot.totalSpots}</Text>
         </View>
         
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Status</Text>
-          <Text style={[styles.availabilityText, { color: availabilityInfo.color }]}>
-            {availabilityInfo.text}
-          </Text>
+          <Text style={styles.statusText}>None</Text>
         </View>
-        
-        {spot.price && (
-          <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>Price</Text>
-            <Text style={styles.infoValue}>
-              ${spot.price.amount}/{spot.price.period}
-            </Text>
-          </View>
-        )}
       </View>
       
       <View style={styles.actionsContainer}>
@@ -89,14 +51,6 @@ const SpotDetails: React.FC<SpotDetailsProps> = ({
           <Text style={styles.actionButtonText}>
             {spot.isFavorite ? 'Saved' : 'Save'}
           </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.navigateButton]}
-          onPress={() => onNavigate(spot)}
-        >
-          <Navigation size={20} color={Colors.white} />
-          <Text style={styles.navigateButtonText}>Navigate</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -146,12 +100,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
-    flexWrap: 'wrap',
   },
   infoItem: {
     flex: 1,
-    minWidth: '30%',
-    marginBottom: 16,
   },
   infoLabel: {
     fontSize: 12,
@@ -165,14 +116,15 @@ const styles = StyleSheet.create({
     color: Colors.neutral[800],
     fontFamily: 'Inter-SemiBold',
   },
-  availabilityText: {
+  statusText: {
     fontSize: 16,
     fontWeight: '600',
+    color: Colors.neutral[400],
     fontFamily: 'Inter-SemiBold',
   },
   actionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   actionButton: {
     flexDirection: 'row',
@@ -184,24 +136,12 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     backgroundColor: Colors.neutral[100],
-    marginRight: 8,
-  },
-  navigateButton: {
-    backgroundColor: Colors.primary[600],
-    marginLeft: 8,
   },
   actionButtonText: {
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '600',
     color: Colors.neutral[800],
-    fontFamily: 'Inter-SemiBold',
-  },
-  navigateButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.white,
     fontFamily: 'Inter-SemiBold',
   },
 });
