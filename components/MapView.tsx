@@ -1,14 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import { ParkingSpot, DEFAULT_REGION } from '@/data/parkingSpots';
 import ParkingMarker from './ParkingMarker';
 import Colors from '@/constants/Colors';
 import * as Location from 'expo-location';
 
-// Import different map components based on platform
-const MapComponent = Platform.select({
+// Import map components based on platform directly in the component
+const WebMapView = Platform.select({
   web: () => require('./WebMapView').default,
-  default: () => require('./NativeMapView').default,
+  default: () => null,
+})();
+
+const NativeMapView = Platform.select({
+  ios: () => require('./NativeMapView').default,
+  android: () => require('./NativeMapView').default,
+  default: () => null,
 })();
 
 interface MapComponentProps {
@@ -50,6 +56,19 @@ const MapView: React.FC<MapComponentProps> = ({
     })();
   }, []);
 
+  // Render the appropriate map component based on platform
+  const MapComponent = Platform.OS === 'web' ? WebMapView : NativeMapView;
+
+  if (!MapComponent) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.fallback}>
+          <Text>Map is not supported on this platform</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <MapComponent
@@ -67,6 +86,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.white,
+  },
+  fallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
