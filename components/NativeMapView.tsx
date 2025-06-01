@@ -1,31 +1,47 @@
 import React, { useRef, useEffect } from 'react';
-import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { StyleSheet, Dimensions } from 'react-native';
+import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
 import { ParkingSpot } from '@/data/parkingSpots';
 import ParkingMarker from './ParkingMarker';
+import Colors from '@/constants/Colors';
 
 interface NativeMapViewProps {
-  region: Region;
-  onRegionChange: (region: Region) => void;
   parkingSpots: ParkingSpot[];
   onMarkerPress?: (spot: ParkingSpot) => void;
-  userLocation: { latitude: number; longitude: number; } | null;
+  initialRegion: Region;
+  userLocation?: {
+    latitude: number;
+    longitude: number;
+  } | null;
 }
 
 const NativeMapView: React.FC<NativeMapViewProps> = ({
-  region,
-  onRegionChange,
   parkingSpots,
   onMarkerPress,
+  initialRegion,
   userLocation,
 }) => {
   const mapRef = useRef<MapView>(null);
+  const [region, setRegion] = React.useState<Region>(initialRegion);
 
   useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.animateToRegion(region, 1000);
+    if (userLocation && mapRef.current) {
+      const newRegion = {
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setRegion(newRegion);
+      mapRef.current.animateToRegion(newRegion);
     }
-  }, [region]);
+  }, [userLocation]);
+
+  const handleMarkerPress = (spot: ParkingSpot) => {
+    if (onMarkerPress) {
+      onMarkerPress(spot);
+    }
+  };
 
   return (
     <MapView
@@ -33,7 +49,7 @@ const NativeMapView: React.FC<NativeMapViewProps> = ({
       provider={PROVIDER_GOOGLE}
       style={styles.map}
       region={region}
-      onRegionChangeComplete={onRegionChange}
+      onRegionChangeComplete={setRegion}
       showsUserLocation={true}
       showsMyLocationButton={true}
       showsCompass={true}
@@ -44,7 +60,7 @@ const NativeMapView: React.FC<NativeMapViewProps> = ({
         <ParkingMarker
           key={spot.id}
           spot={spot}
-          onPress={() => onMarkerPress?.(spot)}
+          onPress={() => handleMarkerPress(spot)}
         />
       ))}
     </MapView>

@@ -1,20 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View, Dimensions, Platform } from 'react-native';
 import { ParkingSpot, DEFAULT_REGION } from '@/data/parkingSpots';
-import ParkingMarker from './ParkingMarker';
 import Colors from '@/constants/Colors';
 import * as Location from 'expo-location';
 
-// Import map components based on platform directly in the component
-const WebMapView = Platform.select({
-  web: () => require('./WebMapView').default,
-  default: () => null,
-})();
-
+// Import platform-specific components
 const NativeMapView = Platform.select({
-  ios: () => require('./NativeMapView').default,
-  android: () => require('./NativeMapView').default,
-  default: () => null,
+  native: () => require('./NativeMapView').default,
+  default: () => require('./WebMapView').default,
 })();
 
 interface MapComponentProps {
@@ -23,12 +16,11 @@ interface MapComponentProps {
   initialRegion?: typeof DEFAULT_REGION;
 }
 
-const MapView: React.FC<MapComponentProps> = ({
+const MapComponent: React.FC<MapComponentProps> = ({
   parkingSpots,
   onMarkerPress,
   initialRegion = DEFAULT_REGION,
 }) => {
-  const [region, setRegion] = useState(initialRegion);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -43,39 +35,19 @@ const MapView: React.FC<MapComponentProps> = ({
       }
 
       let location = await Location.getCurrentPositionAsync({});
-      const userCoords = {
+      setUserLocation({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      };
-      setUserLocation(userCoords);
-      setRegion({
-        ...userCoords,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
       });
     })();
   }, []);
 
-  // Render the appropriate map component based on platform
-  const MapComponent = Platform.OS === 'web' ? WebMapView : NativeMapView;
-
-  if (!MapComponent) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.fallback}>
-          <Text>Map is not supported on this platform</Text>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <MapComponent
-        region={region}
-        onRegionChange={setRegion}
+      <NativeMapView
         parkingSpots={parkingSpots}
         onMarkerPress={onMarkerPress}
+        initialRegion={initialRegion}
         userLocation={userLocation}
       />
     </View>
@@ -87,11 +59,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.white,
   },
-  fallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 });
 
-export default MapView;
+export default MapComponent;
