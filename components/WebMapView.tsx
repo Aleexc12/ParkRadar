@@ -2,7 +2,6 @@ import React from 'react';
 import GoogleMapReact from 'google-map-react';
 import { StyleSheet, View } from 'react-native';
 import { ParkingSpot } from '@/data/parkingSpots';
-import ParkingMarker from './ParkingMarker';
 
 interface WebMapViewProps {
   region: {
@@ -16,6 +15,36 @@ interface WebMapViewProps {
   onMarkerPress?: (spot: ParkingSpot) => void;
   userLocation: { latitude: number; longitude: number; } | null;
 }
+
+interface MarkerProps {
+  spot: ParkingSpot;
+  lat: number;
+  lng: number;
+  onPress: () => void;
+}
+
+const Marker: React.FC<MarkerProps> = ({ spot, onPress }) => (
+  <div
+    onClick={onPress}
+    style={{
+      position: 'absolute',
+      transform: 'translate(-50%, -50%)',
+      width: 40,
+      height: 40,
+      backgroundColor: '#2c8aed',
+      borderRadius: '50%',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      color: 'white',
+      fontWeight: 'bold',
+      cursor: 'pointer',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+    }}
+  >
+    {spot.totalSpots}
+  </div>
+);
 
 const WebMapView: React.FC<WebMapViewProps> = ({
   region,
@@ -37,7 +66,7 @@ const WebMapView: React.FC<WebMapViewProps> = ({
   return (
     <View style={styles.container}>
       <GoogleMapReact
-        bootstrapURLKeys={{ key: 'AIzaSyA7KcEErUn1gTp1rvrDwX0K3lrPoR7ZO5U' }} // Add your Google Maps API key here
+        bootstrapURLKeys={{ key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || '' }}
         defaultCenter={{
           lat: region.latitude,
           lng: region.longitude,
@@ -49,7 +78,7 @@ const WebMapView: React.FC<WebMapViewProps> = ({
         }}
       >
         {parkingSpots.map((spot) => (
-          <ParkingMarker
+          <Marker
             key={spot.id}
             lat={spot.latitude}
             lng={spot.longitude}
