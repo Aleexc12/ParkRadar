@@ -1,19 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, View, Dimensions, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Platform } from 'react-native';
 import { ParkingSpot, DEFAULT_REGION } from '@/data/parkingSpots';
 import Colors from '@/constants/Colors';
 import * as Location from 'expo-location';
 
-// Import platform-specific components
-const NativeMapView = Platform.select({
-  native: () => require('./NativeMapView').default,
-  default: () => require('./WebMapView').default,
-})();
+// Use type imports to avoid bundling implementation
+import type { ComponentType } from 'react';
 
 interface MapComponentProps {
   parkingSpots: ParkingSpot[];
   onMarkerPress?: (spot: ParkingSpot) => void;
   initialRegion?: typeof DEFAULT_REGION;
+}
+
+// Dynamically import the correct map implementation
+let MapImplementation: ComponentType<MapComponentProps>;
+
+if (Platform.OS === 'web') {
+  MapImplementation = require('./WebMapView').default;
+} else {
+  MapImplementation = require('./NativeMapView').default;
 }
 
 const MapComponent: React.FC<MapComponentProps> = ({
@@ -44,7 +50,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   return (
     <View style={styles.container}>
-      <NativeMapView
+      <MapImplementation
         parkingSpots={parkingSpots}
         onMarkerPress={onMarkerPress}
         initialRegion={initialRegion}
