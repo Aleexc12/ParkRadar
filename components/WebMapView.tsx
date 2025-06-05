@@ -37,7 +37,7 @@ const WebMapView: React.FC<WebMapViewProps> = ({
   return (
     <View style={styles.container}>
       <GoogleMapReact
-        bootstrapURLKeys={{ key:  }} // Add your Google Maps API key here
+        bootstrapURLKeys={{ key: EXPO_PUBLIC_GOOGLE_MAPS_KEY }} // Add your Google Maps API key here
         defaultCenter={{
           lat: region.latitude,
           lng: region.longitude,
